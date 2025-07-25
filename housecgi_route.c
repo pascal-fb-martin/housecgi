@@ -68,6 +68,7 @@ static int Debug = 0;
 typedef struct {
     char *name;
     char *uri;
+    char *index;
     size_t urilength;
     char *fullpath;
     int executor;
@@ -109,6 +110,10 @@ static char *housecgi_route_uri (const char *name) {
 
 static char *housecgi_route_registration (const char *name) {
     return housecgi_route_format ("cgi:/%s", name);
+}
+
+static char *housecgi_route_index (const char *name) {
+    return housecgi_route_format ("/%s/index.html", name);
 }
 
 void housecgi_route_initialize (int argc, const char **argv) {
@@ -166,6 +171,25 @@ static const char *housecgi_route_handle (const char *method, const char *uri,
     return housecgi_route_error (uri, 503, "No such CGI service");
 }
 
+static const char *housecgi_route_handleindex (const char *method,
+                                               const char *uri,
+                                               const char *data, int length) {
+    // The purpose of this handler is to workaround the houseportal convention
+    // of querying index.html as the default entry point, which does not
+    // work for CGI applications.
+    //
+    char baseuri[512];
+    snprintf (baseuri, sizeof(baseuri), "%s", uri);
+    char *ending = strstr (baseuri, "/index.html");
+    if (ending) {
+        ending[1] = 'c';
+        ending[2] = 'g';
+        ending[3] = 'i';
+        ending[4] = 0;
+    }
+    return housecgi_route_handle (method, baseuri, data, length);
+}
+
 void housecgi_route_background (time_t now) {
 
     static char **CgiRegistration = 0;
@@ -219,9 +243,11 @@ void housecgi_route_background (time_t now) {
             CgiDirectory[j].name = strdup (canonical);
             CgiDirectory[j].fullpath = strdup (fullpath);
             CgiDirectory[j].uri = housecgi_route_uri (canonical);
+            CgiDirectory[j].index = housecgi_route_index (canonical);
             CgiDirectory[j].urilength = strlen (CgiDirectory[j].uri);
             CgiDirectory[j].started = time(0);
             echttp_route_match (CgiDirectory[j].uri, housecgi_route_handle);
+            echttp_route_uri (CgiDirectory[j].index, housecgi_route_handleindex);
             snprintf (webroot, sizeof(webroot),
                       "/usr/local/share/house/public/%s", canonical);
             CgiDirectory[j].executor =
@@ -249,6 +275,8 @@ void housecgi_route_background (time_t now) {
         CgiDirectory[j].name = 0;
         free (CgiDirectory[j].uri);
         CgiDirectory[j].uri = 0;
+        free (CgiDirectory[j].index);
+        CgiDirectory[j].index = 0;
         free (CgiDirectory[j].fullpath);
         CgiDirectory[j].fullpath = 0;
         changed = 1;
