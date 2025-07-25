@@ -201,9 +201,14 @@ void housecgi_route_background (time_t now) {
         if (stat (fullpath, &filestat)) continue; // No access.
         if (!(filestat.st_mode & S_IXOTH)) continue; // Not executable.
 
+        char canonical[512];
+        snprintf (canonical, sizeof(canonical), "%s", ent->d_name);
+        char *ext = strrchr (canonical, '.');
+        if (ext) *ext = 0;
+
         for (j = 0; j < CgiDirectoryCount; ++j) {
             if (!CgiDirectory[j].name) continue;
-            if (!strcmp (ent->d_name, CgiDirectory[j].name)) {
+            if (!strcmp (canonical, CgiDirectory[j].name)) {
                 CgiDirectory[j].present = 1;
                 break;
             }
@@ -211,17 +216,18 @@ void housecgi_route_background (time_t now) {
         if (j >= CgiDirectoryCount) { // New CGI application.
             j = housecgi_route_new ();
             CgiDirectory[j].present = 1;
-            CgiDirectory[j].name = strdup (ent->d_name);
+            CgiDirectory[j].name = strdup (canonical);
             CgiDirectory[j].fullpath = strdup (fullpath);
-            CgiDirectory[j].uri = housecgi_route_uri (ent->d_name);
+            CgiDirectory[j].uri = housecgi_route_uri (canonical);
             CgiDirectory[j].urilength = strlen (CgiDirectory[j].uri);
             CgiDirectory[j].started = time(0);
             echttp_route_match (CgiDirectory[j].uri, housecgi_route_handle);
             snprintf (webroot, sizeof(webroot),
-                      "/usr/local/share/house/public/%s", ent->d_name);
+                      "/usr/local/share/house/public/%s", canonical);
             CgiDirectory[j].executor =
-                housecgi_execute_declare (ent->d_name, CgiDirectory[j].uri,
-                                          fullpath, webroot);
+                housecgi_execute_declare (CgiDirectory[j].name,
+                                          CgiDirectory[j].uri,
+                                          CgiDirectory[j].fullpath, webroot);
             if (!firstCall) {
                 houselog_event ("CGI", CgiDirectory[j].name, "ACTIVATED",
                                 "EXECUTABLE %s", CgiDirectory[j].fullpath);
