@@ -1,0 +1,10 @@
+#!/bin/sh
+OPTS=
+HTTPOPTS=
+HOUSEOPTS=
+OTHEROPTS=
+if [ -e /etc/default/housegeneric ] ; then . /etc/default/housegeneric ; fi
+if [ -e /etc/default/housecgi ] ; then . /etc/default/housecgi ; fi
+sv start houseportal || exit 1
+exec /usr/local/bin/housecgi $HTTPOPTS $HOUSEOPTS $OTHEROPTS $OPTS
+
