@@ -56,6 +56,10 @@
  *    provided by the CGI application has been decoded and set as HTTP
  *    attributes for this request, including the content type.
  *
+ * int housecgi_execute_max (int id);
+ *
+ *    Return the size of the largest CGI output received so far.
+ *
  * void housecgi_execute_background (time_t now);
  *
  *    Monitor the running CGI subprocesses.
@@ -118,6 +122,7 @@ typedef struct {
     int   read;
     char  out[0x100000];
     int   outlen;
+    int   outmax;
 } CgiChild;
 
 static CgiChild *CgiChildren = 0;
@@ -251,6 +256,7 @@ static void housecgi_execute_listen (int i, int blocking) {
         if ((result > 0) && FD_ISSET(CgiChildren[i].read, &reads)) {
             char *buffer = CgiChildren[i].out + CgiChildren[i].outlen;
             int space = sizeof(CgiChildren[i].out) - CgiChildren[i].outlen - 1;
+            if (space <= 0) return; // No more available space.
             int length = read (CgiChildren[i].read, buffer, space);
             if (length > 0) {
                CgiChildren[i].outlen += length;
@@ -375,6 +381,9 @@ const char *housecgi_execute_output (int id) {
     if (CgiChildren[id].outlen <= 0)
         return housecgi_execute_error (500, "No CGI output");
 
+    if (CgiChildren[id].outlen > CgiChildren[id].outmax)
+        CgiChildren[id].outmax = CgiChildren[id].outlen;
+
     // Extract the header attributes.
     // Accept the following EOL sequences only: CR LF, LF. (Sorry, Apple.)
     int i;
@@ -395,6 +404,11 @@ const char *housecgi_execute_output (int id) {
         }
     }
     return output + 1; // Skip the 2nd new line.
+}
+
+int housecgi_execute_max (int id) {
+    if ((id < 0) || (id >= CgiChildrenCount)) return 0;
+    return CgiChildren[id].outmax;
 }
 
 void housecgi_execute_background (time_t now) {

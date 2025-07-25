@@ -29,6 +29,7 @@ void housecgi_execute_launch (int id,
                               const char *data, int length);
 int housecgi_execute_wait (int id, int blocking);
 const char *housecgi_execute_output (int id);
+int housecgi_execute_max (int id);
 
 void housecgi_execute_background (time_t now);
 int housecgi_execute_status (char *buffer, int size);

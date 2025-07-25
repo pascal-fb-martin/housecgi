@@ -55,6 +55,10 @@ function cgiShowStatus (response) {
         inner.innerHTML = started.toLocaleString().split(' GMT')[0];
         outer.appendChild(inner);
 
+        inner = document.createElement("td");
+        inner.innerHTML = '' + route.max;
+        outer.appendChild(inner);
+
         table.appendChild(outer);
    }
 }
@@ -91,10 +95,11 @@ window.onload = function() {
    </table>
    <table class="housewidetable houseevent" id="services" border="0">
       <tr>
-         <th width="20%">NAME</th>
-         <th width="20%">URI</th>
+         <th width="10%">NAME</th>
+         <th width="15%">URI</th>
          <th width="40%">EXECUTABLE</th>
          <th width="20%">ACTIVATED</th>
+         <th width="15%">MAX OUTPUT</th>
       </tr>
    </table>
 </body>

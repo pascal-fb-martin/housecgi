@@ -297,10 +297,11 @@ int housecgi_route_status (char *buffer, int size) {
         if (!CgiDirectory[i].present) continue;
         cursor += snprintf (buffer+cursor, size-cursor,
                             "%s{\"service\":\"%s\",\"uri\":\"%s\""
-                                ",\"path\":\"%s\",\"start\":%lld}",
+                                ",\"path\":\"%s\",\"start\":%lld,\"max\":%d}",
                             sep, CgiDirectory[i].name, CgiDirectory[i].uri,
                             CgiDirectory[i].fullpath,
-                            (long long)CgiDirectory[i].started);
+                            (long long)CgiDirectory[i].started,
+                            housecgi_execute_max(CgiDirectory[i].executor));
         if (cursor >= size) return 0;
         sep = ",";
     }
