@@ -118,6 +118,7 @@ typedef struct {
     char *executable;
     char *root;
     pid_t running;
+    time_t launched;
     int   write;
     int   read;
     char  out[0x100000];
@@ -229,6 +230,7 @@ static pid_t housecgi_execute_fork (int i) {
     } else {
         // This is the parent process.
         CgiChildren[i].running = child;
+        CgiChildren[i].launched = time (0);
         CgiChildren[i].read = read_pipe[0];
         CgiChildren[i].write = write_pipe[1];
         CgiChildren[i].outlen = 0;
@@ -265,12 +267,16 @@ static void housecgi_execute_listen (int i, int blocking) {
     }
 }
 
-static int housecgi_execute_deceased (int i, int blocking) {
+static int housecgi_execute_deceased (int i) {
 
     if (CgiChildren[i].running <= 0) return 1;
 
-    int options = blocking ? 0 : WNOHANG;
-    pid_t pid = waitpid (CgiChildren[i].running, 0, options);
+    if (CgiChildren[i].launched + 5 < time(0)) {
+        // Time to kill this rogue CGI process.
+        kill (CgiChildren[i].running, SIGSEGV);
+    }
+
+    pid_t pid = waitpid (CgiChildren[i].running, 0, WNOHANG);
     if (pid == CgiChildren[i].running) {
         CgiChildren[i].running = 0;
         if (CgiChildren[i].read > 0) close (CgiChildren[i].read);
@@ -292,7 +298,7 @@ int housecgi_execute_declare (const char *name, const char *uri,
     if (i < 0) {
         // We did not find this CGI program. Create a new context.
         if (CgiChildrenCount >= CgiChildrenSize) {
-            CgiChildrenSize += 16;
+            CgiChildrenSize += 4;
             CgiChildren = realloc (CgiChildren,
                                    CgiChildrenSize*sizeof(CgiChild));
         }
@@ -320,8 +326,8 @@ void housecgi_execute_launch (int id,
 
     if (CgiChildren[id].running > 0) {
         // FIXME: queue the new request?
-        while (!housecgi_execute_deceased (id, 0)) {
-            housecgi_execute_listen (id, 0);
+        while (!housecgi_execute_deceased (id)) {
+            housecgi_execute_listen (id, 1);
         }
     }
 
@@ -345,7 +351,7 @@ int housecgi_execute_wait (int id, int blocking) {
     if ((id < 0) || (id >= CgiChildrenCount)) return 0; // Invalid CGI?
 
     housecgi_execute_listen (id, blocking);
-    return housecgi_execute_deceased (id, blocking);
+    return housecgi_execute_deceased (id);
 }
 
 static char *housecgi_execute_split (char *line) {
@@ -416,7 +422,7 @@ void housecgi_execute_background (time_t now) {
     for (i = 0; i < CgiChildrenCount; ++i) {
         if (CgiChildren[i].running > 0) {
             housecgi_execute_listen (i, 0);
-            housecgi_execute_deceased (i, 0);
+            housecgi_execute_deceased (i);
         }
     }
 }

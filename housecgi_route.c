@@ -210,6 +210,8 @@ void housecgi_route_background (time_t now) {
     char fullpath[512];
     char webroot[512];
 
+    housecgi_execute_background (now);
+
     for (j = 0; j < CgiDirectoryCount; ++j) {
         CgiDirectory[j].present = 0;
     }
