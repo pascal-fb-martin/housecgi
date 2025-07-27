@@ -49,10 +49,13 @@ sudo make USERNAME=`whoami` install-git
 ```
 This configures and starts a new service that _runs under your current account_ (to solve the ownership issue). The git-http-backend CGI application is automatically added to this instance (this is part of the standard git installation).
 
+> [!WARNING]
+> Only systemd based systems are supported at this time.
+
 > [!NOTE]
 > If the Git repositories to share using HTTP are owned by a special account, you can replace ``whoami`` with this account's name.
 
-The provided githttp.sh script hardcodes the path to the Git repositories. You will need to edit the value of environment variable `GIT_PROJECT_ROOT` in file `/var/lib/house/cgigit-bin/githttp`, to reflect your actual path.
+The provided `githttp.sh` script hardcodes the path to the Git repositories. You will need to edit the value of environment variable `GIT_PROJECT_ROOT` in file `/var/lib/house/cgigit-bin/githttp`, to reflect your actual path.
 
 The cgit application must be built from source.
 
