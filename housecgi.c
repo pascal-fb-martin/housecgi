@@ -82,6 +82,8 @@ static void housecgi_background (int fd, int mode) {
 
 int main (int argc, const char **argv) {
 
+    const char *instance = "cgi";
+
     // These strange statements are to make sure that fds 0 to 2 are
     // reserved, since this application might output some errors.
     // 3 descriptors are wasted if 0, 1 and 2 are already open. No big deal.
@@ -94,9 +96,11 @@ int main (int argc, const char **argv) {
     for (i = 1; i < argc; ++i) {
         if (echttp_option_present ("-d", argv[i])) {
             Debug = 1;
+        } else if (echttp_option_match ("-instance=", argv[i], &value)) {
+            instance = value;
         }
     }
-    DEBUG ("Starting.\n");
+    DEBUG ("Starting as %s.\n", instance);
 
     gethostname (HostName, sizeof(HostName));
 
@@ -105,11 +109,13 @@ int main (int argc, const char **argv) {
 
     houseportal_initialize (argc, argv);
     housediscover_initialize (argc, argv);
-    houselog_initialize ("cgi", argc, argv);
+    houselog_initialize (instance, argc, argv);
 
-    housecgi_route_initialize (argc, argv); // Declare the CGI routes.
+    housecgi_route_initialize (instance, argc, argv); // Declare the CGI routes.
 
-    echttp_route_uri ("/cgi/status", housecgi_status);
+    static char uri[128];
+    snprintf (uri, sizeof(uri), "/%s/status", instance);
+    echttp_route_uri (uri, housecgi_status);
     echttp_static_route ("/", "/usr/local/share/house/public");
     echttp_background (&housecgi_background);
     echttp_loop();

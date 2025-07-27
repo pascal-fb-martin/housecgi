@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright 2025, Pascal Martin
 #
@@ -21,9 +21,17 @@
 #
 # SYNOPSYS:
 #
-#    housecgiadd executable public-file ...
+#    housecgiadd [--instance=NAME] executable public-file ...
 #
-CGIBINDIR=/var/lib/house/cgi-bin
+CGIINSTANCE=cgi
+DEFAULTBINDIR=/var/lib/house/$CGIINSTANCE-bin
+
+if [[ "x$1" == "x--instance="* ]] ; then
+   CGIINSTANCE=`cut --delimiter== --fields=2 <<< "x$1"`
+   shift
+fi
+
+CGIBINDIR=/var/lib/house/$CGIINSTANCE-bin
 mkdir -p $CGIBINDIR
 chmod a+rx $CGIBINDIR
 
@@ -32,15 +40,16 @@ CGINAME=`basename $1`
 CGIBIN=$CGIBINDIR/$CGINAME
 CGIPUBLIC=/usr/local/share/house/public/$CGINAME
 
-shift
-
-rm -f $CGIBIN
+rm -f $CGIBIN $DEFAULTBINDIR/$CGINAME
 cp $CGIAPP $CGIBIN
 chmod a+rx $CGIBIN
+shift
 
-mkdir -p $CGIPUBLIC
-chmod a+rx $CGIPUBLIC
 for f in $* ; do
+   # Do this in the loop, so that the directory is created only when needed.
+   mkdir -p $CGIPUBLIC
+   chmod a+rx $CGIPUBLIC
+
    cp $f $CGIPUBLIC
    chmod a+r $CGIPUBLIC/`basename $f`
 done

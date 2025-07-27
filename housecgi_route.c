@@ -22,7 +22,8 @@
  * This module detect all installed CGI applications and register an URL
  * for each one.
  *
- * void housecgi_route_initialize (int argc, const char **argv);
+ * void housecgi_route_initialize (const char *instance,
+ *                                 int argc, const char **argv);
  *
  *    Initialize this module.
  *
@@ -80,7 +81,9 @@ static CgiApplication *CgiDirectory = 0;
 static int CgiDirectoryCount = 0;
 static int CgiDirectorySize = 0;
 
-static const char *CgiBinRoot = "/var/lib/house/cgi-bin";
+static const char *CgiInstance = "cgi";
+static const char *CgiPath = "cgi:/cgi";
+static const char *CgiBinRoot = "/var/lib/house/%s-bin";
 
 static int CgiPollPeriod = 60;
 
@@ -116,7 +119,14 @@ static char *housecgi_route_index (const char *name) {
     return housecgi_route_format ("/%s/index.html", name);
 }
 
-void housecgi_route_initialize (int argc, const char **argv) {
+void housecgi_route_initialize (const char *instance,
+                                int argc, const char **argv) {
+
+    // Expand the default root directory based on the instance name.
+    static char root[128];
+    snprintf (root, sizeof(root), CgiBinRoot, instance);
+    CgiBinRoot = root;
+    CgiPath = housecgi_route_registration (instance);
 
     int i;
     const char *value;
@@ -289,8 +299,7 @@ void housecgi_route_background (time_t now) {
     // Re-register the new list to HousePortal and update the echttp
     // route list if necessary..
     //
-    static const char *path[] = {"cgi:/cgi"};
-    houseportal_declare (echttp_port(4), path, 1);
+    houseportal_declare (echttp_port(4), &CgiPath, 1);
 
     for (j = 0; j < CgiRegistrationCount; ++j) {
         free (CgiRegistration[j]);

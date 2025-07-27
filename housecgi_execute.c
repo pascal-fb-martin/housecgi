@@ -258,7 +258,10 @@ static void housecgi_execute_listen (int i, int blocking) {
         if ((result > 0) && FD_ISSET(CgiChildren[i].read, &reads)) {
             char *buffer = CgiChildren[i].out + CgiChildren[i].outlen;
             int space = sizeof(CgiChildren[i].out) - CgiChildren[i].outlen - 1;
-            if (space <= 0) return; // No more available space.
+            if (space <= 0) {
+                kill (CgiChildren[i].running, SIGSTOP);
+                return; // No more available space.
+            }
             int length = read (CgiChildren[i].read, buffer, space);
             if (length > 0) {
                CgiChildren[i].outlen += length;
@@ -409,7 +412,10 @@ const char *housecgi_execute_output (int id) {
             line = output + 1;
         }
     }
-    return output + 1; // Skip the 2nd new line.
+    length -= (i + 1);
+    if (length <= 0) return ""; // No data left.
+    echttp_content_length (length); // The CGI output might be binary.
+    return output + 1; // Skip the last new line.
 }
 
 int housecgi_execute_max (int id) {

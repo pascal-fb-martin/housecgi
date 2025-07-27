@@ -41,6 +41,39 @@ rebuild: clean all
 housecgi: $(OBJS)
 	gcc -g -Os -o housecgi $(OBJS) -lhouseportal -lechttp -lssl -lcrypto -lm -lrt
 
+# Special git installation (Git is scyzophrenic about _who_ accesses) -----
+
+# This target must be launched as "sudo make USERNAME=`whoami` install-git",
+# preferably after the standard housecgi was installed.
+# This automatically configures the git-http-backend CGI application.
+# If you want to run cgit in addition to git-http-backend, you will need to
+# build and add cgit manually (using "sudo housecgiadd --instance=cgigit cgit")
+# because "apt install cgit" forces install of Apache, a hog of a web server..
+
+install-git:
+	mkdir -p $(SHARE)/public/cgigit
+	sed 's/\/cgi/\/cgigit/' < public/index.html > $(SHARE)/public/cgigit/index.html
+	sed 's/\/cgi/\/cgigit/' < public/events.html > $(SHARE)/public/cgigit/events.html
+	chmod 644 $(SHARE)/public/cgigit/*
+	chmod 755 $(SHARE) $(SHARE)/public $(SHARE)/public/cgigit
+	mkdir -p /var/lib/house/cgigit-bin
+	chmod 755 /var/lib/house/cgigit-bin
+	cp githttp.sh /var/lib/house/cgigit-bin/githttp
+	chmod 755 /var/lib/house/cgigit-bin/githttp
+	if [ -e /lib/systemd/system/housegit.service ] ; then systemctl stop housegit ; fi
+	sed 's/\/housecgi /\/housecgi --instance=cgigit /' < systemd.service | sed "s/User=house/User=$(USERNAME)/" | sed 's/CGI service/CGI service for Git/' > /lib/systemd/system/housegit.service
+	chown root:root /lib/systemd/system/housegit.service
+	systemctl daemon-reload
+	systemctl enable housegit
+	systemctl start housegit
+
+uninstall-git:
+	systemctl stop housegit
+	systemctl disable housegit
+	rm -f /lib/systemd/system/housegit.service
+	rm -rf $(SHARE)/public/cgigit
+	rm -rf /var/lib/house/cgigit-bin
+
 # Application files installation --------------------------------
 
 install-ui:
@@ -61,8 +94,8 @@ install-app: install-ui
 	cp housecgiremove.sh $(HROOT)/bin/housecgiremove
 	chown root:root $(HROOT)/bin/housecgiremove $(HROOT)/bin/housecgiadd
 	chmod 755 $(HROOT)/bin/housecgiremove $(HROOT)/bin/housecgiadd
-	mkdir -p $(SHARE)/cgi-bin
-	chmod 755 $(SHARE)/cgi-bin
+	mkdir -p /var/lib/house/cgi-bin
+	chmod 755 /var/lib/house/cgi-bin
 	touch /etc/default/housecgi
 
 uninstall-app:

@@ -40,3 +40,18 @@ Two helpers are provided:
 
 * `housecgiremove` uninstalls a list of CGI applications, identified by their names.
 
+## HouseCgi and Git
+
+This CGI support was originally intended to run cgit and git-hhtp-backend, but there are some twists, as Git is picky about ownership. This makes the installation of these applications somewhat tricky. A special make target `install-git` eases the pain.
+
+To install a git-specific instance of HouseCgi, use the following command:
+```
+sudo make USERNAME=`whoami` install-git
+```
+This configures and starts a new service that _runs under your current account_ (to solve the ownership issue). The git-http-backend CGI application is automatically added to this instance (this is a standard part of a git installation). The cgit application must be built from source and then installed using the command:
+```
+sudo housecgiadd --instance=cgigit cgit
+```
+> [!NOTE]
+> cgit is not installed using apt because Debian decided that it required Apache, which is not used here and conflicts with HousePortal on port 80.
+

@@ -19,7 +19,8 @@
  *
  * housecgi_route.h - Manage the routes to all CGI applications.
  */
-void housecgi_route_initialize (int argc, const char **argv);
+void housecgi_route_initialize (const char *instance,
+                                int argc, const char **argv);
 void housecgi_route_background (time_t now);
 int  housecgi_route_status (char *buffer, int size);
 
