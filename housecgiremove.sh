@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright 2025, Pascal Martin
 #
@@ -21,9 +21,17 @@
 #
 # SYNOPSYS:
 #
-#    housecgiadd executable public-file ...
+#    housecgiremove [--instance=NAME] app ..
 #
-CGIBINDIR=/var/lib/house/cgi-bin
+CGIINSTANCE=cgi
+DEFAULTBINDIR=/var/lib/house/$CGIINSTANCE-bin
+
+if [[ "x$1" == "x--instance="* ]] ; then
+   CGIINSTANCE=`cut --delimiter== --fields=2 <<< "x$1"`
+   shift
+fi
+
+CGIBINDIR=/var/lib/house/$CGIINSTANCE-bin
 
 for f in $* ; do
    CGIAPP=$f
