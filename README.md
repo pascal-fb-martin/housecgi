@@ -7,11 +7,10 @@ This service allow the integration of a CGI compliant application within the Hou
 
 This service itself is not intended to have a user interface. Instead it advertises all the installed CGI applications as if these were House services. It also advertises itself (as the "cgi" service) to give access to a (minimal) maintenance and troubleshooting web UI.
 
-## Warnings
-
-HouseCGI is still fairly new. Its goal is to implement the complete CGI RFC, but this is still a work in progress.
-
-There is no access security. This tool is meant to be used on a local, secure, network only.
+> [!WARNING]
+> HouseCGI is still fairly new. Its goal is to implement the complete CGI RFC, but this is still a work in progress.
+>
+>There is no access security. This tool is meant to be used on a local, secure, network only.
 
 ## Installation
 
@@ -42,7 +41,7 @@ Two helpers are provided:
 
 ## HouseCgi and Git
 
-This CGI support was originally intended to run cgit and git-hhtp-backend, but there are some twists, as Git is picky about ownership. This makes the installation of these applications somewhat tricky. A special make target `install-git` eases the pain.
+This CGI support was originally intended to run cgit and git-hhtp-backend, but there are some twists as Git is picky about ownership. This makes the installation of these applications somewhat tricky. A special make target `install-git` eases the pain.
 
 To install a git-specific instance of HouseCgi, use the following command:
 ```
