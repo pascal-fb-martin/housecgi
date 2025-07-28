@@ -238,13 +238,11 @@ static pid_t housecgi_execute_fork (int i) {
         CgiChildren[i].write = write_pipe[1];
         CgiChildren[i].outlen = 0;
         CgiChildren[i].outtotal = 0;
+        if (CgiChildren[i].overflow) free (CgiChildren[i].overflow);
         CgiChildren[i].overflow = 0;
         CgiChildren[i].overflowlen = 0;
     }
     return child;
-}
-
-static void housecgi_execute_read (char *buffer, int size) {
 }
 
 static void housecgi_execute_listen (int i, int blocking) {
@@ -352,10 +350,13 @@ int housecgi_execute_declare (const char *name, const char *uri,
         if (CgiChildren[i].executable) free (CgiChildren[i].executable);
         if (CgiChildren[i].uri) free (CgiChildren[i].uri);
         if (CgiChildren[i].root) free (CgiChildren[i].root);
+        if (CgiChildren[i].overflow) free (CgiChildren[i].overflow);
     }
     CgiChildren[i].executable = strdup (path);
     CgiChildren[i].uri = strdup (uri);
     CgiChildren[i].root = strdup (root);
+    CgiChildren[i].overflow = 0;
+    CgiChildren[i].overflowlen = 0;
 
     return i;
 }
@@ -372,6 +373,13 @@ void housecgi_execute_launch (int id,
             housecgi_execute_listen (id, 1);
         }
     }
+
+    // Cleanup, just in case.
+    if (CgiChildren[id].overflow) {
+        free (CgiChildren[id].overflow);
+        CgiChildren[id].overflow = 0;
+    }
+    CgiChildren[id].overflowlen = 0;
 
     pid_t child = housecgi_execute_fork (id);
     if (child < 0) return; // Failure.

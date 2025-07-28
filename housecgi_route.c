@@ -92,7 +92,7 @@ static int housecgi_route_new (void) {
     // First try to reuse a discarded slot.
     int i;
     for (i = 0; i < CgiDirectoryCount; ++i) {
-        if (!CgiDirectory[i].uri) return i;
+        if (!CgiDirectory[i].name) return i;
     }
     if (CgiDirectoryCount >= CgiDirectorySize) {
         CgiDirectorySize += 8;
@@ -304,7 +304,10 @@ void housecgi_route_background (time_t now) {
     for (j = 0; j < CgiRegistrationCount; ++j) {
         free (CgiRegistration[j]);
     }
-    if (CgiRegistration) free (CgiRegistration);
+    if (CgiRegistration) {
+        free (CgiRegistration);
+        CgiRegistration = 0;
+    }
     if (CgiDirectoryCount <= 0) return; // Nothing to declare.
 
     CgiRegistration = malloc (sizeof(char *) * CgiDirectoryCount);
