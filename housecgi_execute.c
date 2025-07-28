@@ -121,8 +121,11 @@ typedef struct {
     time_t launched;
     int   write;
     int   read;
-    char  out[0x100000];
+    char  out[0x10000];
     int   outlen;
+    char *overflow;
+    int   overflowlen;
+    int   outtotal;
     int   outmax;
 } CgiChild;
 
@@ -234,8 +237,14 @@ static pid_t housecgi_execute_fork (int i) {
         CgiChildren[i].read = read_pipe[0];
         CgiChildren[i].write = write_pipe[1];
         CgiChildren[i].outlen = 0;
+        CgiChildren[i].outtotal = 0;
+        CgiChildren[i].overflow = 0;
+        CgiChildren[i].overflowlen = 0;
     }
     return child;
+}
+
+static void housecgi_execute_read (char *buffer, int size) {
 }
 
 static void housecgi_execute_listen (int i, int blocking) {
@@ -256,15 +265,45 @@ static void housecgi_execute_listen (int i, int blocking) {
 
         int result = select (CgiChildren[i].read+1, &reads, 0, 0, &timeout);
         if ((result > 0) && FD_ISSET(CgiChildren[i].read, &reads)) {
-            char *buffer = CgiChildren[i].out + CgiChildren[i].outlen;
+            char *buffer;
+            int use_overflow = 0;
             int space = sizeof(CgiChildren[i].out) - CgiChildren[i].outlen - 1;
-            if (space <= 0) {
-                kill (CgiChildren[i].running, SIGSTOP);
-                return; // No more available space.
+            if (space > 0) {
+                // Still gathering the first 64 KB of the CGI data
+                // (which contains the header).
+                buffer = CgiChildren[i].out + CgiChildren[i].outlen;
+            } else {
+                // Any data beyond this first block is accumulated in
+                // the overflow buffer and then queued to echttp.
+                use_overflow = 1;
+                if (CgiChildren[i].overflow) {
+                   space = sizeof(CgiChildren[i].out)
+                                - CgiChildren[i].overflowlen;
+                   if (space < 512) {
+                      // The overflow is filled enough: submit the data
+                      // to echttp and use a new overflow buffer.
+                      echttp_content_queue (CgiChildren[i].overflow,
+                                            CgiChildren[i].overflowlen);
+                      CgiChildren[i].overflow = 0;
+                   }
+                }
+                if (!CgiChildren[i].overflow) {
+                    // We need a new overflow buffer, the same size as
+                    // the initial buffer.
+                    CgiChildren[i].overflow =
+                         malloc (sizeof(CgiChildren[i].out));
+                    CgiChildren[i].overflowlen = 0;
+                    space = sizeof(CgiChildren[i].out);
+                }
+                buffer = CgiChildren[i].overflow + CgiChildren[i].overflowlen;
             }
             int length = read (CgiChildren[i].read, buffer, space);
             if (length > 0) {
-               CgiChildren[i].outlen += length;
+               if (use_overflow)
+                   CgiChildren[i].overflowlen += length;
+               else
+                   CgiChildren[i].outlen += length;
+               CgiChildren[i].outtotal += length;
             }
         }
     }
@@ -387,11 +426,18 @@ const char *housecgi_execute_output (int id) {
 
     if (CgiChildren[id].running > 0) return 0; // Not complete yet.
 
-    if (CgiChildren[id].outlen <= 0)
+    if (CgiChildren[id].outtotal <= 0)
         return housecgi_execute_error (500, "No CGI output");
 
-    if (CgiChildren[id].outlen > CgiChildren[id].outmax)
-        CgiChildren[id].outmax = CgiChildren[id].outlen;
+    if (CgiChildren[id].overflow) {
+        echttp_content_queue (CgiChildren[id].overflow,
+                              CgiChildren[id].overflowlen);
+        CgiChildren[id].overflow = 0;
+        CgiChildren[id].overflowlen = 0;
+    }
+
+    if (CgiChildren[id].outtotal > CgiChildren[id].outmax)
+        CgiChildren[id].outmax = CgiChildren[id].outtotal;
 
     // Extract the header attributes.
     // Accept the following EOL sequences only: CR LF, LF. (Sorry, Apple.)
