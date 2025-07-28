@@ -92,3 +92,13 @@ You can also provide your own "about" information for the repositories index pag
 root-readme=/usr/local/share/house/public/cgit/about.html
 ```
 
+Once everything has been configured and the git-http-backend service is running, repositories can be cloned using the URL below:
+```
+http://<your server>/githttp/cgi/<your repository>
+```
+
+When the cgit service is running, the Git web UI is accessible at the URL below:
+```
+http://<your server>/cgit/cgi/<your repository>
+```
+
