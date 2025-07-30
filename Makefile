@@ -95,6 +95,7 @@ uninstall-app:
 	rm -f $(DESTDIR)$(prefix)/bin/housecgi
 	rm -f $(DESTDIR)$(prefix)/bin/housecgiadd
 	rm -f $(DESTDIR)$(prefix)/bin/housecgiremove
+	rm -rf $(DESTDIR)/var/lib/house/cgi-bin
 
 purge-app:
 
