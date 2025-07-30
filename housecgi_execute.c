@@ -119,6 +119,7 @@ typedef struct {
     char *root;
     pid_t running;
     time_t launched;
+    int   timedout;
     int   write;
     int   read;
     char  out[0x10000];
@@ -234,6 +235,7 @@ static pid_t housecgi_execute_fork (int i) {
         // This is the parent process.
         CgiChildren[i].running = child;
         CgiChildren[i].launched = time (0);
+        CgiChildren[i].timedout = 0;
         CgiChildren[i].read = read_pipe[0];
         CgiChildren[i].write = write_pipe[1];
         CgiChildren[i].outlen = 0;
@@ -314,6 +316,7 @@ static int housecgi_execute_deceased (int i) {
     if (CgiChildren[i].launched + 5 < time(0)) {
         // Time to kill this rogue CGI process.
         kill (CgiChildren[i].running, SIGSEGV);
+        CgiChildren[i].timedout = 1;
     }
 
     pid_t pid = waitpid (CgiChildren[i].running, 0, WNOHANG);
@@ -325,6 +328,15 @@ static int housecgi_execute_deceased (int i) {
         return 1;
     }
     return 0;
+}
+
+static void housecgi_execute_cleanup (int id) {
+
+    if (CgiChildren[id].overflow) {
+        free (CgiChildren[id].overflow);
+        CgiChildren[id].overflow = 0;
+    }
+    CgiChildren[id].overflowlen = 0;
 }
 
 void housecgi_execute_initialize (int argc, const char **argv) {
@@ -375,11 +387,7 @@ void housecgi_execute_launch (int id,
     }
 
     // Cleanup, just in case.
-    if (CgiChildren[id].overflow) {
-        free (CgiChildren[id].overflow);
-        CgiChildren[id].overflow = 0;
-    }
-    CgiChildren[id].overflowlen = 0;
+    housecgi_execute_cleanup (id);
 
     pid_t child = housecgi_execute_fork (id);
     if (child < 0) return; // Failure.
@@ -435,8 +443,14 @@ const char *housecgi_execute_output (int id) {
     if (CgiChildren[id].running > 0) return 0; // Not complete yet.
 
     if (CgiChildren[id].outtotal <= 0)
-        return housecgi_execute_error (500, "No CGI output");
+        return housecgi_execute_error (502, "No CGI output");
 
+    if (CgiChildren[id].timedout) {
+        housecgi_execute_cleanup (id);
+        return housecgi_execute_error (504, "CGI timeout");;
+    }
+
+    // Flush out any leftover output.
     if (CgiChildren[id].overflow) {
         echttp_content_queue (CgiChildren[id].overflow,
                               CgiChildren[id].overflowlen);
@@ -462,7 +476,23 @@ const char *housecgi_execute_output (int id) {
             if ((*line == 0) || (*line == '\n')) break;
             *output = 0;
             char *value = housecgi_execute_split (line);
-            echttp_attribute_set (line, value);
+            if (!strcmp (value, "Location")) {
+                echttp_redirect (value);
+            } else if (!strcmp (value, "Status")) {
+                if (strcmp (value, "200")) {
+                   const char *reason = "CGI status";
+                   int status = atoi(value);
+                   const char *sep = strchr (value, ' ');
+                   if (sep) reason = sep + 1;
+                   if ((status < 100) || (status > 599)) {
+                       status = 502;
+                       reason = "CGI invalid response";
+                   }
+                   echttp_error (status, reason);
+                }
+            } else {
+                echttp_attribute_set (line, value);
+            }
             line = output + 1;
         }
     }
