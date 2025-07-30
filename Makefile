@@ -1,6 +1,6 @@
 # Housecgi - A simple home web service to support CGI applications.
 #
-# Copyright 2023, Pascal Martin
+# Copyright 2025, Pascal Martin
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -16,10 +16,17 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA  02110-1301, USA.
+#
+# WARNING
+#
+# This Makefile depends on echttp and houseportal (dev) being installed.
+
+prefix=/usr/local
+SHARE=$(prefix)/share/house
+
+INSTALL=/usr/bin/install
 
 HAPP=housecgi
-HROOT=/usr/local
-SHARE=$(HROOT)/share/house
 
 # Application build. --------------------------------------------
 
@@ -49,63 +56,50 @@ housecgi: $(OBJS)
 # If you want to run cgit in addition to git-http-backend, you will need to
 # build and add cgit manually (using "sudo housecgiadd --instance=cgigit cgit")
 # because "apt install cgit" forces install of Apache, a hog of a web server..
+# Only systemd is supported here. Support for runit is left as an excercise..
 
 install-git:
-	mkdir -p $(SHARE)/public/cgigit
-	sed 's/\/cgi/\/cgigit/' < public/index.html > $(SHARE)/public/cgigit/index.html
-	sed 's/\/cgi/\/cgigit/' < public/events.html > $(SHARE)/public/cgigit/events.html
-	chmod 644 $(SHARE)/public/cgigit/*
-	chmod 755 $(SHARE) $(SHARE)/public $(SHARE)/public/cgigit
-	mkdir -p /var/lib/house/cgigit-bin
-	chmod 755 /var/lib/house/cgigit-bin
-	cp githttp.sh /var/lib/house/cgigit-bin/githttp
-	chmod 755 /var/lib/house/cgigit-bin/githttp
-	if [ -e /lib/systemd/system/housegit.service ] ; then systemctl stop housegit ; fi
-	sed 's/\/housecgi /\/housecgi --instance=cgigit /' < systemd.service | sed "s/User=house/User=$(USERNAME)/" | sed 's/CGI service/CGI service for Git/' > /lib/systemd/system/housegit.service
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/public/cgigit
+	sed 's/\/cgi/\/cgigit/' < public/index.html > $(DESTDIR)$(SHARE)/public/cgigit/index.html
+	sed 's/\/cgi/\/cgigit/' < public/events.html > $(DESTDIR)$(SHARE)/public/cgigit/events.html
+	chmod 644 $(DESTDIR)$(SHARE)/public/cgigit/*
+	$(INSTALL) -m 0755 -d $(DESTDIR)/var/lib/house/cgigit-bin
+	$(INSTALL) -m 0755 -T githttp.sh $(DESTDIR)/var/lib/house/cgigit-bin/githttp
+	if [ "x$(DESTDIR)" = "x" ] ; then if [ -e /lib/systemd/system/housegit.service ] ; then systemctl stop housegit ; fi ; fi
+	sed 's/\/housecgi /\/housecgi --instance=cgigit /' < systemd.service | sed "s/User=house/User=$(USERNAME)/" | sed 's/CGI service/CGI service for Git/' > $(DESTDIR)/lib/systemd/system/housegit.service
 	chown root:root /lib/systemd/system/housegit.service
-	systemctl daemon-reload
-	systemctl enable housegit
-	systemctl start housegit
+	if [ "x$(DESTDIR)" = "x" ] ; then systemctl daemon-reload ; systemctl enable housegit ; systemctl start housegit ; fi
 
 uninstall-git:
 	systemctl stop housegit
 	systemctl disable housegit
-	rm -f /lib/systemd/system/housegit.service
-	rm -rf $(SHARE)/public/cgigit
-	rm -rf /var/lib/house/cgigit-bin
+	rm -f $(DESTDIR)/lib/systemd/system/housegit.service
+	rm -rf $(DESTDIR)$(SHARE)/public/cgigit
+	rm -rf $(DESTDIR)/var/lib/house/cgigit-bin
 
 # Application files installation --------------------------------
 
-install-ui:
-	mkdir -p $(SHARE)/public/cgi
-	cp public/* $(SHARE)/public/cgi
-	chmod 644 $(SHARE)/public/cgi/*
-	chmod 755 $(SHARE) $(SHARE)/public $(SHARE)/public/cgi
+install-ui: install-preamble
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/public/cgi
+	$(INSTALL) -m 0644 public/* $(DESTDIR)$(SHARE)/public/cgi
 
 install-app: install-ui
-	mkdir -p $(HROOT)/bin
-	mkdir -p /var/lib/house
-	mkdir -p /etc/house
-	rm -f $(HROOT)/bin/housecgi
-	cp housecgi $(HROOT)/bin
-	chown root:root $(HROOT)/bin/housecgi
-	chmod 755 $(HROOT)/bin/housecgi
-	cp housecgiadd.sh $(HROOT)/bin/housecgiadd
-	cp housecgiremove.sh $(HROOT)/bin/housecgiremove
-	chown root:root $(HROOT)/bin/housecgiremove $(HROOT)/bin/housecgiadd
-	chmod 755 $(HROOT)/bin/housecgiremove $(HROOT)/bin/housecgiadd
-	mkdir -p /var/lib/house/cgi-bin
-	chmod 755 /var/lib/house/cgi-bin
-	touch /etc/default/housecgi
+	$(INSTALL) -m 0755 -s housecgi $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -T housecgiadd.sh $(DESTDIR)$(prefix)/bin/housecgiadd
+	$(INSTALL) -m 0755 -T housecgiremove.sh $(DESTDIR)$(prefix)/bin/housecgiremove
+	$(INSTALL) -m 0755 -d $(DESTDIR)/var/lib/house/cgi-bin
+	touch $(DESTDIR)/etc/default/housecgi
 
 uninstall-app:
-	rm -rf $(SHARE)/public/cgi
-	rm -f $(HROOT)/bin/housecgi $(HROOT)/bin/housecgiadd $(HROOT)/bin/housecgiremove
+	rm -rf $(DESTDIR)$(SHARE)/public/cgi
+	rm -f $(DESTDIR)$(prefix)/bin/housecgi
+	rm -f $(DESTDIR)$(prefix)/bin/housecgiadd
+	rm -f $(DESTDIR)$(prefix)/bin/housecgiremove
 
 purge-app:
 
 purge-config:
-	rm -rf /etc/default/housecgi
+	rm -rf $(DESTDIR)/etc/default/housecgi
 
 # System installation. ------------------------------------------
 
@@ -117,13 +111,10 @@ docker: all
 	rm -rf build
 	mkdir -p build
 	cp Dockerfile build
-	mkdir -p build$(HROOT)/bin
-	cp housecgi build$(HROOT)/bin
-	chmod 755 build$(HROOT)/bin/housecgi
-	mkdir -p build$(HROOT)/share/house/public/cgi
-	cp public/* build$(HROOT)/share/house/public/cgi
-	chmod 644 build$(HROOT)/share/house/public/cgi/*
-	cp $(SHARE)/public/house.css build$(HROOT)/share/house/public
-	chmod 644 build$(HROOT)/share/house/public/house.css
+	mkdir -p build$(prefix)/bin
+	$(INSTALL) -m 0755 -s housecgi build$(prefix)/bin
+	$(INSTALL) -m 0755 -d build$(prefix)/share/house/public/cgi
+	$(INSTALL) -m 0644 public/* build$(prefix)/share/house/public/cgi
+	$(INSTALL) -m 0644 $(SHARE)/public/house.css build$(prefix)/share/house/public
 	cd build ; docker build -t housecgi .
 	rm -rf build
