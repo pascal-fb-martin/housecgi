@@ -46,7 +46,7 @@ rebuild: clean all
 	gcc -c -g -Os -o $@ $<
 
 housecgi: $(OBJS)
-	gcc -g -Os -o housecgi $(OBJS) -lhouseportal -lechttp -lssl -lcrypto -lm -lrt
+	gcc -g -Os -o housecgi $(OBJS) -lhouseportal -lechttp -lssl -lcrypto -lmagic -lm -lrt
 
 # Special git installation (Git is scyzophrenic about _who_ accesses) -----
 
