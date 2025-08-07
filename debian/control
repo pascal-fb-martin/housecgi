@@ -1,0 +1,18 @@
+Source: housecgi
+Version: 1.0
+Section: Web servers
+Maintainer: Pascal Martin <pascal.fb.martin@gmail.com>
+Priority: optional
+Homepage: https://github.com/pascal-fb-martin/housecgi
+Standard-Version: 4.7.0
+Package: housecgi
+Architecture: {{arch}}
+Depends: 
+Description: A House service to interface with CGI applications
+ HouseCGI is part of the House suite of web services.
+ .
+ HouseCGI implements the web server side of the CGI standard (RFC 3875),
+ at least a reasonable subset of it. This make it possible to integrate
+ CGI applications, such as cgit or git-http-backend, as part of the House
+ environment.
+

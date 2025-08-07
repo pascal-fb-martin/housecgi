@@ -33,7 +33,7 @@ HAPP=housecgi
 OBJS=housecgi.o housecgi_route.o housecgi_execute.o
 LIBOJS=
 
-all: housecgi
+all: housecgi example
 
 main: housecgi.o
 
@@ -48,34 +48,8 @@ rebuild: clean all
 housecgi: $(OBJS)
 	gcc -g -Os -o housecgi $(OBJS) -lhouseportal -lechttp -lssl -lcrypto -lmagic -lm -lrt
 
-# Special git installation (Git is scyzophrenic about _who_ accesses) -----
-
-# This target must be launched as "sudo make USERNAME=`whoami` install-git",
-# preferably after the standard housecgi was installed.
-# This automatically configures the git-http-backend CGI application.
-# If you want to run cgit in addition to git-http-backend, you will need to
-# build and add cgit manually (using "sudo housecgiadd --instance=cgigit cgit")
-# because "apt install cgit" forces install of Apache, a hog of a web server..
-# Only systemd is supported here. Support for runit is left as an excercise..
-
-install-git:
-	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/public/cgigit
-	sed 's/\/cgi/\/cgigit/' < public/index.html > $(DESTDIR)$(SHARE)/public/cgigit/index.html
-	sed 's/\/cgi/\/cgigit/' < public/events.html > $(DESTDIR)$(SHARE)/public/cgigit/events.html
-	chmod 644 $(DESTDIR)$(SHARE)/public/cgigit/*
-	$(INSTALL) -m 0755 -d $(DESTDIR)/var/lib/house/cgigit-bin
-	$(INSTALL) -m 0755 -T githttp.sh $(DESTDIR)/var/lib/house/cgigit-bin/githttp
-	if [ "x$(DESTDIR)" = "x" ] ; then if [ -e /lib/systemd/system/housegit.service ] ; then systemctl stop housegit ; fi ; fi
-	sed 's/\/housecgi /\/housecgi --instance=cgigit /' < systemd.service | sed "s/User=house/User=$(USERNAME)/" | sed 's/CGI service/CGI service for Git/' > $(DESTDIR)/lib/systemd/system/housegit.service
-	chown root:root /lib/systemd/system/housegit.service
-	if [ "x$(DESTDIR)" = "x" ] ; then systemctl daemon-reload ; systemctl enable housegit ; systemctl start housegit ; fi
-
-uninstall-git:
-	systemctl stop housegit
-	systemctl disable housegit
-	rm -f $(DESTDIR)/lib/systemd/system/housegit.service
-	rm -rf $(DESTDIR)$(SHARE)/public/cgigit
-	rm -rf $(DESTDIR)/var/lib/house/cgigit-bin
+example:
+	cd test ; cc -O -o cgiexample cgiexample.c
 
 # Application files installation --------------------------------
 
@@ -83,14 +57,21 @@ install-ui: install-preamble
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/public/cgi
 	$(INSTALL) -m 0644 public/* $(DESTDIR)$(SHARE)/public/cgi
 
-install-app: install-ui
+install-runtime: install-preamble
 	$(INSTALL) -m 0755 -s housecgi $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/cgi
+	$(INSTALL) -m 0755 githttp.sh $(DESTDIR)$(SHARE)/cgi
+	$(INSTALL) -m 0755 -s test/cgiexample $(DESTDIR)$(SHARE)/cgi
 	$(INSTALL) -m 0755 -T housecgiadd.sh $(DESTDIR)$(prefix)/bin/housecgiadd
 	$(INSTALL) -m 0755 -T housecgiremove.sh $(DESTDIR)$(prefix)/bin/housecgiremove
+	$(INSTALL) -m 0755 -T housecgigit.sh $(DESTDIR)$(prefix)/bin/housecgigit
 	$(INSTALL) -m 0755 -d $(DESTDIR)/var/lib/house/cgi-bin
 	touch $(DESTDIR)/etc/default/housecgi
 
+install-app: install-ui install-runtime
+
 uninstall-app:
+	rm -rf $(DESTDIR)$(SHARE)/cgi
 	rm -rf $(DESTDIR)$(SHARE)/public/cgi
 	rm -f $(DESTDIR)$(prefix)/bin/housecgi
 	rm -f $(DESTDIR)$(prefix)/bin/housecgiadd
@@ -101,6 +82,27 @@ purge-app:
 
 purge-config:
 	rm -rf $(DESTDIR)/etc/default/housecgi
+
+# Build a private Debian package. -------------------------------
+#
+# The user running the housecgi git instance is not defined here,
+# because it would be the name of the user who built the package,
+# not the name of the user who is installing it.
+# Assigning the use here is obviously wrong, but k
+
+install-package: install-ui install-runtime install-systemd
+
+debian-package:
+	rm -rf build
+	install -m 0755 -d build/$(HAPP)/DEBIAN
+	cat debian/control | sed "s/{{arch}}/`dpkg --print-architecture`/" > build/$(HAPP)/DEBIAN/control
+	install -m 0644 debian/copyright build/$(HAPP)/DEBIAN
+	install -m 0644 debian/changelog build/$(HAPP)/DEBIAN
+	install -m 0755 debian/postinst build/$(HAPP)/DEBIAN
+	install -m 0755 debian/prerm build/$(HAPP)/DEBIAN
+	install -m 0755 debian/postrm build/$(HAPP)/DEBIAN
+	make DESTDIR=build/$(HAPP) install-package
+	cd build ; fakeroot dpkg-deb -b $(HAPP) .
 
 # System installation. ------------------------------------------
 

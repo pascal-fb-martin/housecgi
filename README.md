@@ -41,11 +41,11 @@ Two helpers are provided:
 
 ## HouseCGI and Git
 
-This CGI support was originally intended to run cgit and git-hhtp-backend, but there are some twists as Git is picky about ownership. This makes the installation of these applications somewhat tricky. A special make target `install-git` eases the pain, but there are still additional steps required.
+This CGI support was originally intended to run cgit and git-hhtp-backend, but there are some twists as Git is picky about ownership. This makes the installation of these applications somewhat tricky. A special script `housecgigit` eases the pain, but there are still additional steps required.
 
-To install a git-specific instance of HouseCGI, use the following command:
+To install a git-specific instance of HouseCGI, use the following command _as the owner of the git repositories_:
 ```
-sudo make USERNAME=`whoami` install-git
+sudo housecgigit
 ```
 This configures and starts a new service that _runs under your current account_ (to solve the ownership issue). The git-http-backend CGI application is automatically added to this instance (this is part of the standard git installation).
 
@@ -53,14 +53,15 @@ This configures and starts a new service that _runs under your current account_ 
 > Only systemd based systems are supported at this time.
 
 > [!NOTE]
-> If the Git repositories to share using HTTP are owned by a special account, you can replace ``whoami`` with this account's name.
-
-The provided `githttp.sh` script hardcodes the path to the Git repositories. You will need to edit the value of environment variable `GIT_PROJECT_ROOT` in file `/var/lib/house/cgigit-bin/githttp`, to reflect your actual path.
-
-The cgit application must be built from source.
+> The default configuration for git-http-backend is to look for git repositories in `/space/git`. If yout repositories location is different, create file `/etc/house/githttp` (a shell script) and set the environment variable `GIT_PROJECT_ROOT` to match your actual location.
 
 > [!NOTE]
-> cgit should not be installed using apt because Debian decided that it required Apache, which is not used here and conflicts with HousePortal on port 80.
+> If the Git repositories to share using HTTP are owned by a special account different from the user account, you can use the command `sudo housecgigit --user=NAME`.
+
+The cgit application should be built from source.
+
+> [!NOTE]
+> It is not recommended to install cgit using apt because Debian decided that it required Apache, which is not used here and conflicts with HousePortal on port 80. An alternative could be to install cgit using apt, and then permanently disable the Apache service.
 >
 
 Building cgit require editing a `cgit.conf` file. I found that the following configuration is working for me:
@@ -100,5 +101,21 @@ http://<your server>/githttp/cgi/<your repository>
 When the cgit service is running, the Git web UI is accessible at the URL below:
 ```
 http://<your server>/cgit/cgi/<your repository>
+```
+
+## Debian Packaging 
+
+The provided Makefile supports building private Debian packages. These are _not_ official packages:
+
+- They do not follow all Debian policies.
+
+- They are not built using Debian standard conventions and tools.
+
+- The packaging is not separate from the upstream sources, and there is
+  no source package.
+
+To build a Debian package, use the `debian-package` target:
+```
+make debian-package
 ```
 
