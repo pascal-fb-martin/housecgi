@@ -1,4 +1,5 @@
 # HouseCGI
+
 The House service to interface with Common Gateway Interface (CGI) applications
 
 ## Overview
@@ -44,9 +45,11 @@ Two helpers are provided:
 This CGI support was originally intended to run cgit and git-hhtp-backend, but there are some twists as Git is picky about ownership. This makes the installation of these applications somewhat tricky. A special script `housecgigit` eases the pain, but there are still additional steps required.
 
 To install a git-specific instance of HouseCGI, use the following command _as the owner of the git repositories_:
+
 ```
 sudo housecgigit
 ```
+
 This configures and starts a new service that _runs under your current account_ (to solve the ownership issue). The git-http-backend CGI application is automatically added to this instance (this is part of the standard git installation).
 
 > [!WARNING]
@@ -65,6 +68,7 @@ The cgit application should be built from source.
 >
 
 Building cgit require editing a `cgit.conf` file. I found that the following configuration is working for me:
+
 ```
 CGIT_SCRIPT_NAME = cgit
 CGIT_SCRIPT_PATH = /var/lib/house/cgigit-bin
@@ -74,6 +78,7 @@ CGIT_DATA_PATH = /usr/local/share/house/public/cgit
 This configuration automatically installs cgit under the proper instance of HouseCGI when running `make install`, no need to run `housecgiadd`.
 
 The cgit installation also requires editing a `/etc/cgitrc` file. One can extract the example from file `cgitrc.5.txt` and modify the following items:
+
 ```
 css=/cgit/cgit.css
 js=/cgit/cgit.js
@@ -89,16 +94,19 @@ about-filter=/usr/local/lib/cgit/filters/about-formatting.sh
 Do not forget to set `scan-path` to your specific repositories location, or else to list each one of your repositories. You can also set your own title (`root-title`) and subheading (`root-desc`).
 
 You can also provide your own "about" information for the repositories index page (see `root-readme`). The simplest method is to install the `about.html` file in `/usr/local/share/house/public/cgit` and edit `/etc/gitrc` to point to it:
+
 ```
 root-readme=/usr/local/share/house/public/cgit/about.html
 ```
 
 Once everything has been configured and the git-http-backend service is running, repositories can be cloned using the URL below:
+
 ```
 http://<your server>/githttp/cgi/<your repository>
 ```
 
 When the cgit service is running, the Git web UI is accessible at the URL below:
+
 ```
 http://<your server>/cgit/cgi/<your repository>
 ```
@@ -115,6 +123,7 @@ The provided Makefile supports building private Debian packages. These are _not_
   no source package.
 
 To build a Debian package, use the `debian-package` target:
+
 ```
 make debian-package
 ```
