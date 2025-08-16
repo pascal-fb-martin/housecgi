@@ -7,7 +7,7 @@ Homepage: https://github.com/pascal-fb-martin/housecgi
 Standard-Version: 4.7.0
 Package: housecgi
 Architecture: {{arch}}
-Depends: 
+Depends: houseportal
 Description: A House service to interface with CGI applications
  HouseCGI is part of the House suite of web services.
  .
