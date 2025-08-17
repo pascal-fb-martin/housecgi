@@ -18,8 +18,8 @@ function compareCgi (a, b) {
 
 function cgiCleanTable (table) {
 
-    for (var i = table.childNodes.length - 1; i > 1; i--) {
-        table.removeChild(table.childNodes[i]);
+    for (var i = table.rows.length - 1; i > 0; i--) {
+        table.deleteRow(i);
     }
 }
 
@@ -36,7 +36,7 @@ function cgiShowStatus (response) {
    for (var i = 0; i < routes.length; i++) {
         var route = routes[i];
 
-        var outer = document.createElement("tr");
+        var outer = table.insertRow();
 
         var inner = document.createElement("td");
         inner.innerHTML = route.service;
@@ -58,8 +58,6 @@ function cgiShowStatus (response) {
         inner = document.createElement("td");
         inner.innerHTML = '' + route.max;
         outer.appendChild(inner);
-
-        table.appendChild(outer);
    }
 }
 
