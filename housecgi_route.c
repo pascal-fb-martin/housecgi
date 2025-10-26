@@ -81,7 +81,6 @@ static CgiApplication *CgiDirectory = 0;
 static int CgiDirectoryCount = 0;
 static int CgiDirectorySize = 0;
 
-static const char *CgiInstance = "cgi";
 static const char *CgiPath = "cgi:/cgi";
 static const char *CgiBinRoot = "/var/lib/house/%s-bin";
 
@@ -218,7 +217,7 @@ void housecgi_route_background (time_t now) {
     int j;
     struct dirent **files = 0;
     char fullpath[512];
-    char webroot[512];
+    char webroot[640];
 
     housecgi_execute_background (now);
 

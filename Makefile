@@ -44,7 +44,7 @@ clean:
 rebuild: clean all
 
 %.o: %.c
-	gcc -c -g -Os -o $@ $<
+	gcc -c -Wall -g -Os -o $@ $<
 
 housecgi: $(OBJS)
 	gcc -g -Os -o housecgi $(OBJS) -lhouseportal -lechttp -lssl -lcrypto -lmagic -lm -lrt

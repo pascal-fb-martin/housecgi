@@ -54,7 +54,7 @@ static const char *housecgi_status (const char *method, const char *uri,
 
     cursor = snprintf (buffer, sizeof(buffer),
                        "{\"host\":\"%s\",\"timestamp\":%lld,\"cgi\":{",
-                       HostName);
+                       HostName, (long long)time(0));
 
     cursor += housecgi_route_status (buffer+cursor, sizeof(buffer)-cursor);
 
@@ -67,7 +67,6 @@ static void housecgi_background (int fd, int mode) {
 
     static time_t LastCall = 0;
     time_t now = time(0);
-    time_t yesterday = now - (24 * 3600);
 
     if (now == LastCall) return;
     LastCall = now;

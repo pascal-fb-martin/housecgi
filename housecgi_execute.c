@@ -107,10 +107,6 @@
 #include "housecgi_route.h"
 #include "housecgi_execute.h"
 
-static int Debug = 0;
-
-#define DEBUG if (Debug) printf
-
 typedef struct {
     char *name;
     long long signature;
@@ -523,5 +519,6 @@ int housecgi_execute_status (char *buffer, int size) {
         if (CgiChildren[i].running > 0) {
         }
     }
+    return 0;
 }
 
