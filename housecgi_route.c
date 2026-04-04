@@ -56,6 +56,7 @@
 #include <sys/stat.h>
 
 #include "echttp.h"
+#include "echttp_libc.h"
 #include "houseportalclient.h"
 #include "houselog.h"
 
@@ -188,14 +189,10 @@ static const char *housecgi_route_handleindex (const char *method,
     // work for CGI applications.
     //
     char baseuri[512];
-    snprintf (baseuri, sizeof(baseuri), "%s", uri);
+    char *end = baseuri + sizeof(baseuri);
+    stpecpy (baseuri, end, uri);
     char *ending = strstr (baseuri, "/index.html");
-    if (ending) {
-        ending[1] = 'c';
-        ending[2] = 'g';
-        ending[3] = 'i';
-        ending[4] = 0;
-    }
+    if (ending) stpecpy (ending, end, "/cgi");
     return housecgi_route_handle (method, baseuri, data, length);
 }
 
