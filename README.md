@@ -56,7 +56,7 @@ This configures and starts a new service that _runs under your current account_ 
 > Only systemd based systems are supported at this time.
 
 > [!NOTE]
-> The default configuration for git-http-backend is to look for git repositories in `/space/git`. If your repositories location is different, create file `/etc/house/githttp` (a shell script) and set the environment variable `GIT_PROJECT_ROOT` to match your actual location.
+> The default configuration for git-http-backend is to look for git repositories in `/space/Projects`. If your repositories location is different, create file `/etc/house/githttp` (a shell script) and set the environment variable `GIT_PROJECT_ROOT` to match your actual location.
 
 > [!NOTE]
 > If the Git repositories to share using HTTP are owned by a special account different from the user account, you can use the command `sudo housecgigit --user=NAME`.
