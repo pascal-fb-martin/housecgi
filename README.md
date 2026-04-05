@@ -86,6 +86,7 @@ favicon=/cgit/favicon.ico
 logo=/cgit/cgit.png
 source-filter=/usr/local/lib/cgit/filters/syntax-highlighting.py
 about-filter=/usr/local/lib/cgit/filters/about-formatting.sh
+remove-suffix=1
 ```
 
 > [!NOTE]
