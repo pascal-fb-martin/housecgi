@@ -234,7 +234,7 @@ void housecgi_route_background (time_t now) {
         if (!(filestat.st_mode & S_IXOTH)) continue; // Not executable.
 
         char canonical[512];
-        memccpy (canonical, ent->d_name, 0, sizeof(canonical));
+        strtcpy (canonical, ent->d_name, sizeof(canonical));
         char *ext = strrchr (canonical, '.');
         if (ext) *ext = 0;
 
